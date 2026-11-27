@@ -5,10 +5,10 @@ A Vite + React + TypeScript Markdown viewer with first-class right-to-left (Pers
 ## Scripts
 
 ```bash
-npm install      # install dependencies
-npm run dev      # start the dev server (http://localhost:5173)
-npm run build    # type-check (tsc -b) and build to dist/
-npm run preview  # serve the production build locally
+pnpm install     # install dependencies
+pnpm dev         # start the dev server (http://localhost:5173)
+pnpm build       # type-check (tsc -b) and build to dist/
+pnpm preview     # serve the production build locally
 ```
 
 ## Features
