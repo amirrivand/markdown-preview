@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RTL Markdown Viewer</title>
+<script>
+(function () {
+  var REACT = {
+    cdn: "https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js",
+    integrity: "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z",
+    local: "./_runtime/react.js"
+  };
+  var REACT_DOM = {
+    cdn: "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js",
+    integrity: "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1",
+    local: "./_runtime/react-dom.js"
+  };
+  var SUPPORT = "./_runtime/support.js";
+  var APP = "./viewer.js";
+  function load(src, integrity) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.async = false;
+      if (integrity) {
+        s.integrity = integrity;
+        s.crossOrigin = "anonymous";
+      }
+      s.onload = function () { resolve(src); };
+      s.onerror = function () { reject(new Error("failed: " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  function preferCdn(entry) {
+    return load(entry.cdn, entry.integrity).catch(function () {
+      return load(entry.local);
+    });
+  }
+  function injectApp() {
+    return fetch(APP).then(function (res) {
+      if (!res.ok) throw new Error("failed: " + APP + " (" + res.status + ")");
+      return res.text();
+    }).then(function (code) {
+      var el = document.querySelector("script[data-dc-script]");
+      if (!el) throw new Error("missing script[data-dc-script]");
+      el.textContent = code;
+    });
+  }
+  function ready() {
+    if (document.querySelector("script[data-dc-script]")) return Promise.resolve();
+    return new Promise(function (resolve) {
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", resolve);
+      else resolve();
+    });
+  }
+  preferCdn(REACT)
+    .then(function () { return preferCdn(REACT_DOM); })
+    .then(function () { return ready(); })
+    .then(function () { return injectApp(); })
+    .then(function () { return load(SUPPORT); })
+    .catch(function (err) { console.error("[rtl-md-viewer] runtime bootstrap failed", err); });
+})();
+</script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Vazirmatn:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+<link rel="stylesheet" href="./viewer.css">
+</helmet>
+<div class="shell">
+<header class="top">
+<div class="brand">
+<div class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5h9M12 5l3 2.5L12 10M16 12.5H7M8 10l-3 2.5L8 15" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.15">
+<span class="brand-title">RTL Markdown</span>
+<span class="brand-sub" dir="rtl" lang="fa">نمایشگر راست‌به‌چپ</span>
+</div>
+</div>
+<div class="tools">
+<div class="seg" role="group" aria-label="Preview direction">
+<span class="segl">Direction</span>
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="3"><button type="button" data-on="{{m.on}}" aria-pressed="{{m.on}}" title="{{m.hint}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
+</div>
+<button type="button" class="tb" data-on="{{srcOpenOn}}" aria-pressed="{{srcOpenOn}}" aria-label="{{srcToggleLabel}}" title="{{srcToggleLabel}}" onClick="{{toggleSrc}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="5" height="10" rx="1.2"></rect><path d="M9.5 5.5L13 8l-3.5 2.5"></path></svg><span class="lb">{{srcToggleShort}}</span></button>
+<button type="button" class="tb" data-on="{{guidesOn}}" aria-pressed="{{guidesOn}}" aria-label="Show direction guides" onClick="{{toggleGuides}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke-dasharray="2.2 2.2"></rect><path d="M5.5 8h5"></path></svg><span class="lb">Guides</span></button>
+<span class="vr"></span>
+<button type="button" class="tb" aria-label="Load sample document" onClick="{{loadSample}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.8h5l3 3v9.4H4z"></path><path d="M9 1.8v3h3M6.3 8.5h3.4M6.3 11h3.4"></path></svg><span class="lb">Sample</span></button>
+<button type="button" class="tb" aria-label="Paste from clipboard" onClick="{{pasteClip}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="6" height="2.2" rx="1"></rect><path d="M4 4.5h8v9.2H4z"></path></svg><span class="lb">{{pasteLabel}}</span></button>
+<button type="button" class="tb tbx" aria-label="Clear source" onClick="{{clearAll}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 4.2h10.4M6 4.2V2.5h4v1.7M4.4 4.2l.6 9.3h6l.6-9.3"></path></svg><span class="lb">Clear</span></button>
+<button type="button" class="tb" aria-label="Copy Markdown source" onClick="{{copySrc}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="5.2" y="5.2" width="8.6" height="8.6" rx="1.6"></rect><path d="M10.8 5.2V3.6c0-.9-.7-1.6-1.6-1.6H3.6C2.7 2 2 2.7 2 3.6v5.6c0 .9.7 1.6 1.6 1.6h1.6"></path></svg><span class="lb">{{copySrcLabel}}</span></button>
+<button type="button" class="tb tbp" aria-label="Export preview as PDF" onClick="{{exportPdf}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h6L12.5 5v8.5h-9z"></path><path d="M9.5 2.5V5h2.5M5.5 9h5M5.5 11.5h3.5"></path></svg><span class="lb">PDF</span></button>
+</div>
+</header>
+<main class="panes" data-src="{{srcPane}}">
+<section class="pane ed" aria-label="Markdown source" aria-hidden="{{srcHidden}}">
+<div class="ph">
+<span class="pt">Source</span>
+<span class="pm"><span class="pm-long">{{statSource}}</span></span>
+<div class="ph-actions">
+<button type="button" class="tbd" aria-label="Editor text direction: {{edDirLabel}}" onClick="{{cycleEdDir}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h10M9 2l3 3-3 3M14 11H4M7 8l-3 3 3 3"></path></svg>{{edDirLabel}}</button>
+<button type="button" class="tbd" aria-label="Collapse source panel" title="Collapse source" onClick="{{toggleSrc}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l-4 4 4 4"></path></svg></button>
+</div>
+</div>
+<label for="md-src" class="sr">Markdown source</label>
+<div class="ed-body">
+<div class="hl-layer" id="hl-layer" aria-hidden="true" style="transform: translateY({{hlY}}px)"><sc-for list="{{hlLines}}" as="ln" hint-placeholder-count="6"><div class="hl-line" data-on="{{ln.on}}">{{ln.t}}</div></sc-for></div>
+<textarea id="md-src" class="ta" dir="{{edDir}}" spellcheck="false" placeholder="Write or paste Markdown / HTML here…  مارک‌داون یا HTML را اینجا بنویسید" value="{{src}}" onChange="{{onInput}}" onScroll="{{onEdScroll}}" onClick="{{onEdCaret}}" onKeyUp="{{onEdCaret}}" onSelect="{{onEdCaret}}"></textarea>
+</div>
+</section>
+<section class="pane pv" aria-label="Rendered preview">
+<div class="ph">
+<span class="pt">Preview</span>
+<span class="pm"><span class="pm-long">{{statPreview}}</span></span>
+<div class="ph-actions">
+<sc-if value="{{srcCollapsed}}" hint-placeholder-val="{{false}}">
+<button type="button" class="tbd light" data-on="true" aria-label="Show source panel" title="Show source" onClick="{{toggleSrc}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"></path><rect x="2.5" y="3" width="4.5" height="10" rx="1"></rect></svg><span class="lb">Source</span></button>
+</sc-if>
+</div>
+</div>
+<div class="scroll" id="pv-scroll" onScroll="{{onPvScroll}}">
+<article class="md" data-guide="{{guideFlag}}">
+<sc-if value="{{showEmpty}}" hint-placeholder-val="{{false}}">
+<div class="empty">
+<svg width="42" height="42" viewBox="0 0 34 34" fill="none" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" stroke="#C9C2B4" stroke-width="1.5"></rect><path d="M8 13h14M18.5 9.5L22 13l-3.5 3.5M26 21H12M15.5 17.5L12 21l3.5 3.5" stroke="#8A938A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div>Nothing to preview yet. Paste Markdown, load the sample, or start typing.</div>
+<div dir="rtl" lang="fa">هنوز چیزی برای نمایش نیست — Paste یا Sample را بزنید.</div>
+</div>
+</sc-if>
+<sc-for list="{{blocks}}" as="b" hint-placeholder-count="4">
+<div class="blk" dir="{{b.dir}}" lang="{{b.lang}}" data-k="{{b.key}}" data-from="{{b.from}}" data-to="{{b.to}}" data-guide="{{b.guide}}" data-hi="{{b.hi}}" onMouseEnter="{{b.enter}}" onMouseLeave="{{b.leave}}">
+<sc-if value="{{b.showBadge}}" hint-placeholder-val="{{false}}"><span class="badge" data-tone="{{b.tone}}" aria-hidden="true">{{b.badge}}</span></sc-if>
+<sc-if value="{{b.isH1}}" hint-placeholder-val="{{false}}"><h1><sc-for list="{{b.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if><sc-if value="{{s2.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s2.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}">{{s2.t}}</a></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></h1></sc-if>
+<sc-if value="{{b.isH2}}" hint-placeholder-val="{{false}}"><h2><sc-for list="{{b.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if><sc-if value="{{s2.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s2.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}">{{s2.t}}</a></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></h2></sc-if>
+<sc-if value="{{b.isH3}}" hint-placeholder-val="{{false}}"><h3><sc-for list="{{b.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if><sc-if value="{{s2.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s2.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}">{{s2.t}}</a></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></h3></sc-if>
+<sc-if value="{{b.isH4}}" hint-placeholder-val="{{false}}"><h4><sc-for list="{{b.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if><sc-if value="{{s2.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s2.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}">{{s2.t}}</a></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></h4></sc-if>
+<sc-if value="{{b.isP}}" hint-placeholder-val="{{true}}"><p><sc-for list="{{b.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isMath}}" hint-placeholder-val="{{false}}"><span class="mathi" dir="ltr" data-tex="{{s.t}}">{{s.t}}</span></sc-if><sc-if value="{{s.isKbd}}" hint-placeholder-val="{{false}}"><kbd class="kbd" dir="ltr">{{s.t}}</kbd></sc-if><sc-if value="{{s.isFn}}" hint-placeholder-val="{{false}}"><a class="fnref" href="#{{s.href}}">[{{s.t}}]</a></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if><sc-if value="{{s2.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s2.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}">{{s2.t}}</a></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></p></sc-if>
+<sc-if value="{{b.isWrap}}" hint-placeholder-val="{{false}}"><div class="wrap" dir="{{b.dir}}" lang="{{b.lang}}"><sc-for list="{{b.children}}" as="c" hint-placeholder-count="2"><sc-if value="{{c.isP}}" hint-placeholder-val="{{true}}"><p><sc-for list="{{c.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer">{{s.t}}</a></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></p></sc-if><sc-if value="{{c.isList}}" hint-placeholder-val="{{false}}"><ul class="ls"><sc-for list="{{c.items}}" as="it" hint-placeholder-count="2"><li class="li" style="padding-inline-start: {{it.pad}}px"><span class="mk">{{it.marker}}</span><span class="lt"><sc-for list="{{it.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span>{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for></div></sc-if>
+<sc-if value="{{b.isList}}" hint-placeholder-val="{{false}}"><ul class="ls"><sc-for list="{{b.items}}" as="it" hint-placeholder-count="3"><li class="li" style="padding-inline-start: {{it.pad}}px"><sc-if value="{{it.notTask}}" hint-placeholder-val="{{true}}"><span class="mk">{{it.marker}}</span></sc-if><sc-if value="{{it.isTask}}" hint-placeholder-val="{{false}}"><span class="cbx" data-done="{{it.done}}" role="img" aria-label="{{it.taskLabel}}"><sc-if value="{{it.isDone}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span></sc-if><span class="lt" data-done="{{it.done}}"><sc-for list="{{it.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s2.fw}}; font-style: {{s2.fs}}; text-decoration-line: {{s2.td}}">{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isImg}}" hint-placeholder-val="{{false}}"><img class="im" src="{{s.src}}" alt="{{s.t}}"></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></span></li></sc-for></ul></sc-if>
+<sc-if value="{{b.isQuote}}" hint-placeholder-val="{{false}}"><blockquote class="bq"><sc-for list="{{b.paras}}" as="q" hint-placeholder-count="1"><p><sc-for list="{{q.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isMath}}" hint-placeholder-val="{{false}}"><span class="mathi" dir="ltr" data-tex="{{s.t}}">{{s.t}}</span></sc-if><sc-if value="{{s.isKbd}}" hint-placeholder-val="{{false}}"><kbd class="kbd" dir="ltr">{{s.t}}</kbd></sc-if><sc-if value="{{s.isBdi}}" hint-placeholder-val="{{false}}"><bdi class="bdi" dir="{{s.dir}}"><sc-for list="{{s.inner}}" as="s2" hint-placeholder-count="1"><sc-if value="{{s2.isText}}" hint-placeholder-val="{{true}}"><span>{{s2.t}}</span></sc-if><sc-if value="{{s2.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s2.t}}</code></sc-if></sc-for></bdi></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></p></sc-for></blockquote></sc-if>
+<sc-if value="{{b.isAlert}}" hint-placeholder-val="{{false}}"><aside class="alert" data-kind="{{b.alertKind}}"><div class="alert-h">{{b.alertLabel}}</div><sc-for list="{{b.paras}}" as="q" hint-placeholder-count="1"><p><sc-for list="{{q.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isKbd}}" hint-placeholder-val="{{false}}"><kbd class="kbd" dir="ltr">{{s.t}}</kbd></sc-if><sc-if value="{{s.isMath}}" hint-placeholder-val="{{false}}"><span class="mathi" dir="ltr" data-tex="{{s.t}}">{{s.t}}</span></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer">{{s.t}}</a></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></p></sc-for></aside></sc-if>
+<sc-if value="{{b.isFront}}" hint-placeholder-val="{{false}}"><figure class="fm"><div class="fmh">YAML FRONT MATTER</div><pre class="fmb">{{b.text}}</pre></figure></sc-if>
+<sc-if value="{{b.isCite}}" hint-placeholder-val="{{false}}"><figure class="cite" dir="ltr"><div class="citeh"><span>{{b.range}}</span><span class="citepath">{{b.path}}</span><button type="button" class="cpy" aria-label="Copy code" onClick="{{b.copy}}">{{b.copyLabel}}</button></div><div class="cbb"><div class="cbi"><sc-for list="{{b.lines}}" as="ln" hint-placeholder-count="3"><div class="cl"><span class="cn" aria-hidden="true">{{ln.n}}</span><span class="ct">{{ln.t}}</span></div></sc-for></div></div></figure></sc-if>
+<sc-if value="{{b.isDetails}}" hint-placeholder-val="{{false}}"><details class="det"><summary>{{b.summary}}</summary><sc-for list="{{b.paras}}" as="q" hint-placeholder-count="1"><p><sc-for list="{{q.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></p></sc-for></details></sc-if>
+<sc-if value="{{b.isCode}}" hint-placeholder-val="{{false}}"><figure class="cb" dir="ltr" style="margin: 0 0 1.25em"><div class="cbh"><span>{{b.lang}}</span><span class="lock">LTR</span><button type="button" class="cpy" aria-label="Copy code" onClick="{{b.copy}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="5.2" y="5.2" width="8.6" height="8.6" rx="1.6"></rect><path d="M10.8 5.2V3.6c0-.9-.7-1.6-1.6-1.6H3.6C2.7 2 2 2.7 2 3.6v5.6c0 .9.7 1.6 1.6 1.6h1.6"></path></svg>{{b.copyLabel}}</button></div><div class="cbb"><div class="cbi"><sc-for list="{{b.lines}}" as="ln" hint-placeholder-count="3"><div class="cl"><span class="cn" aria-hidden="true">{{ln.n}}</span><span class="ct">{{ln.t}}</span></div></sc-for></div></div></figure></sc-if>
+<sc-if value="{{b.isFlow}}" hint-placeholder-val="{{false}}"><figure class="flow"><div class="flowh">{{b.flowTitle}} · LTR</div><div class="flowb"><sc-if value="{{b.flowOk}}" hint-placeholder-val="{{true}}"><img class="im" src="{{b.svgUrl}}" alt="Diagram"></sc-if><sc-if value="{{b.flowFail}}" hint-placeholder-val="{{false}}"><pre class="flow-err">{{b.flowErr}}</pre></sc-if></div></figure></sc-if>
+<sc-if value="{{b.isMath}}" hint-placeholder-val="{{false}}"><div class="mt" dir="ltr" data-tex="{{b.text}}"><span class="mlab">KaTeX · LTR</span><div class="mtx">{{b.text}}</div></div></sc-if>
+<sc-if value="{{b.isTable}}" hint-placeholder-val="{{false}}"><div class="tw"><div class="tg" role="table" style="grid-template-columns: repeat({{b.ncols}}, minmax(min-content, auto))"><div role="row" style="display: contents"><sc-for list="{{b.head}}" as="c" hint-placeholder-count="3"><div role="columnheader" class="th" style="text-align: {{c.align}}"><sc-for list="{{c.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></div></sc-for></div><sc-for list="{{b.rows}}" as="r" hint-placeholder-count="2"><div role="row" style="display: contents"><sc-for list="{{r.cells}}" as="c" hint-placeholder-count="3"><div role="cell" class="td" data-odd="{{r.odd}}" style="text-align: {{c.align}}"><sc-for list="{{c.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer" style="font-weight: {{s.fw}}; font-style: {{s.fs}}">{{s.t}}</a></sc-if><sc-if value="{{s.isBr}}" hint-placeholder-val="{{false}}"><br></sc-if></sc-for></div></sc-for></div></sc-for></div></div></sc-if>
+<sc-if value="{{b.isHr}}" hint-placeholder-val="{{false}}"><hr class="hr"></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{showFns}}" hint-placeholder-val="{{false}}">
+<section class="fn" aria-label="Footnotes">
+<div class="fn-title">Footnotes</div>
+<sc-for list="{{footnotes}}" as="fn" hint-placeholder-count="2">
+<div class="fn-item" id="{{fn.aid}}"><span class="fn-mark">[{{fn.n}}]</span><span><sc-for list="{{fn.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.isText}}" hint-placeholder-val="{{true}}"><span style="font-weight: {{s.fw}}; font-style: {{s.fs}}; text-decoration-line: {{s.td}}">{{s.t}}</span></sc-if><sc-if value="{{s.isCode}}" hint-placeholder-val="{{false}}"><code class="ic" dir="ltr">{{s.t}}</code></sc-if><sc-if value="{{s.isLink}}" hint-placeholder-val="{{false}}"><a href="{{s.href}}" target="_blank" rel="noopener noreferrer">{{s.t}}</a></sc-if></sc-for></span></div>
+</sc-for>
+</section>
+</sc-if>
+</article>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'></script>
+</body>
+</html>
