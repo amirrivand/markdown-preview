@@ -5,6 +5,9 @@ dist-ssr
 *.tsbuildinfo
 .vite
 npm-debug.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
 .DS_Store
 .env
 .env.*
