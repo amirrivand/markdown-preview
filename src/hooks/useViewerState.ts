@@ -331,11 +331,15 @@ export function useViewerState() {
   const copySrc = useCallback(() => copyText(src, 'src'), [copyText, src]);
 
   const exportPdf = useCallback(() => {
-    try {
-      window.print();
-    } catch {
-      /* printing unavailable */
-    }
+    void import('../lib/exportPdf')
+      .then(({ exportPreviewPdf }) => exportPreviewPdf('Locale MarkDown'))
+      .catch(() => {
+        try {
+          window.print();
+        } catch {
+          /* printing unavailable */
+        }
+      });
   }, []);
 
   const doPaste = useCallback(() => {

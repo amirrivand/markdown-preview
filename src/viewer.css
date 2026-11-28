@@ -1270,18 +1270,47 @@ button:focus-visible {
   }
 }
 
+/* In-page print fallback when iframe export is unavailable */
 @media print {
   @page {
-    margin: 12mm;
+    margin: 14mm;
+    size: auto;
   }
-  body {
+  html.is-printing,
+  html.is-printing body,
+  html.is-printing #root,
+  html,
+  body,
+  #root {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
     background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .shell,
+  .shell-desk,
+  .shell-mob,
+  .panes,
+  .pane,
+  .pv,
+  .scroll,
+  .mob-stage,
+  .mob-panel,
+  .md {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
   }
   .shell {
-    height: auto;
-    overflow: visible;
-    background: #fff;
-    padding: 0;
+    background: #fff !important;
+    padding: 0 !important;
+    display: block !important;
   }
   .top,
   .mob-top,
@@ -1294,40 +1323,52 @@ button:focus-visible {
   .seg,
   .tb,
   .tbd,
-  .tools {
+  .tools,
+  .brand,
+  .badge,
+  .cpy {
     display: none !important;
   }
   .panes,
   .panes[data-src="off"],
   .mob-stage {
-    display: block;
-    grid-template-columns: none;
-    grid-template-rows: none;
+    display: block !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
   }
   .mob-panel[hidden] {
     display: block !important;
   }
   .pv {
-    border: 0;
-    background: #fff;
-  }
-  .scroll {
-    overflow: visible;
+    border: 0 !important;
+    background: #fff !important;
+    width: 100% !important;
   }
   .md {
-    max-width: none;
-    padding: 0;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .blk[data-hi="true"] {
-    background: transparent;
-    box-shadow: none;
-  }
-  .badge {
-    display: none;
+    background: transparent !important;
+    box-shadow: none !important;
   }
   .flow,
   .cb,
-  .tw {
+  .cite,
+  .tw,
+  .alert,
+  .fm,
+  .mt,
+  .bq,
+  .det {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .md img,
+  .md svg {
+    max-width: 100% !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

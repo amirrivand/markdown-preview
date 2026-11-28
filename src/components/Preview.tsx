@@ -37,7 +37,12 @@ export const Preview = memo(function Preview({
 }: PreviewProps) {
   return (
     <div className="scroll" id="pv-scroll" ref={scrollRef} onScroll={onScroll}>
-      <article className="md" data-guide={guides ? 'on' : 'off'} data-editing={editingKey ? 'true' : 'false'}>
+      <article
+        id="md-print-root"
+        className="md"
+        data-guide={guides ? 'on' : 'off'}
+        data-editing={editingKey ? 'true' : 'false'}
+      >
         {empty && (
           <div className="empty">
             <svg width="42" height="42" viewBox="0 0 34 34" fill="none" aria-hidden="true">
