@@ -1274,7 +1274,7 @@ button:focus-visible {
 @media print {
   @page {
     margin: 14mm;
-    size: auto;
+    size: A4;
   }
   html.is-printing,
   html.is-printing body,

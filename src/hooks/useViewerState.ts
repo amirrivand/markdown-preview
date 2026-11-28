@@ -143,6 +143,19 @@ export function useViewerState() {
     [],
   );
 
+  // Warm the print chunk so the first PDF click is not blocked on network.
+  useEffect(() => {
+    const warm = () => {
+      void import('../lib/exportPdf');
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(warm, 800);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const endSync = useCallback(() => {
     window.clearTimeout(syncTimer.current);
     syncTimer.current = window.setTimeout(() => {
@@ -331,13 +344,30 @@ export function useViewerState() {
   const copySrc = useCallback(() => copyText(src, 'src'), [copyText, src]);
 
   const exportPdf = useCallback(() => {
+    // Eager path keeps the call inside the user-gesture turn when possible.
     void import('../lib/exportPdf')
-      .then(({ exportPreviewPdf }) => exportPreviewPdf('Locale MarkDown'))
+      .then(async ({ exportPreviewPdf }) => {
+        try {
+          await exportPreviewPdf('Locale MarkDown');
+        } catch {
+          try {
+            document.documentElement.classList.add('is-printing');
+            window.print();
+          } catch {
+            /* printing unavailable */
+          } finally {
+            window.setTimeout(() => document.documentElement.classList.remove('is-printing'), 1000);
+          }
+        }
+      })
       .catch(() => {
         try {
+          document.documentElement.classList.add('is-printing');
           window.print();
         } catch {
           /* printing unavailable */
+        } finally {
+          window.setTimeout(() => document.documentElement.classList.remove('is-printing'), 1000);
         }
       });
   }, []);
